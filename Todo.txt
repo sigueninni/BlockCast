@@ -1,0 +1,11 @@
+   //on utilisera GnosisSafe pour le multisig du withdarwal et un contrat treasury ou Vault
+
+
+   //adminManager
+   predictionmarketFactory
+   predictionMarket
+   treasury/Vault
+   TokenIncentives
+   OutcomeTokens
+   AMM?
+   
