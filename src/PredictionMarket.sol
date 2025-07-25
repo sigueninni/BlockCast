@@ -5,6 +5,20 @@ contract PredictionMarket {
     // -------------------------------------------------------------------------
     // 1. Type Declarations
     // -------------------------------------------------------------------------
+    /*     enum MarketStatus {
+        Open,
+        Paused,
+        Resoled,
+        Canceled,
+        Refunded
+    }
+
+    Struct MarketInfo{
+        bytes32 id;
+        address creator;
+        uint256 endTime;
+        MarketStatus status;
+    } */
     // -------------------------------------------------------------------------
     // 2. State Variables
     // -------------------------------------------------------------------------

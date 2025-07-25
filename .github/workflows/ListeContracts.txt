@@ -7,23 +7,23 @@ ERC20 natif, sert d’incentive.
 
 MarketFactory
 Déploie les marchés.
-Garde la liste des marchés créés.
-Gère les paramètres globaux (ex. caution créateur) -> a confirmer avec Camille & Thomas.
-Distribue des CAST aux créateurs. -> a confirmer avec Camille & Thomas.
+Garde la liste des marchés créés.... une ref 
+Gère les paramètres globaux (ex. caution créateur , quelle montant? determiné par qui? peut ere maj? ) -> a confirmer avec Camille & Thomas.
+Distribue des CAST aux créateurs. -> a confirmer avec Camille & Thomas. attention, ici, si on donne et on slah? peut etre minter au resolve? 
 
 Market
-Gère un marché individuel : dépôts en USDC, balances internes YES/NO. pas de nouveaux ERC20!
+Gère un marché individuel : dépôts en USDC, balances internes YES/NO. pas ERC20 a chaque market, trop complexe et couteux
 Mint des BetNFT à chaque pari. -> a confirmer avec Camille & Thomas.
 Permet resolve, redeem, slashing du créateur en cas d’abus. -> a confirmer avec Camille & Thomas.
 Contient une logique de gouvernance simple (vote CAST) pour trancher les disputes. ou gérer ça dans un autre contrat? à creuser
 
 Treasury
 Contrat vault qui collecte les fees du protocole et les cautions slashed.
-Extraction sécurisée , todo : etuier GnosisSafe.
+Extraction sécurisée , todo : etuier GnosisSafe.... a checker comment ça fonctionne? 
 
 5BetNFT 
 ERC721 minté à chaque pari.
-Contient : marketId, outcome (YES/NO), montant parié.
+Contient : marketId, outcome (YES/NO), montant parié.....
 Revendable sur les marketplaces.
 faut il des metadata spécifiue ou un truc simple V1?
 
@@ -39,3 +39,12 @@ V1 simple : ProtocolToken , MarketFactory, Market , BetNFT, Treasury. et si poss
 
 V2 avancée : ProtocolToken avec ERC20Votes (ERC-5805), GovernanceModule (avec ERC-6372), AdminManager plus élaboré.
 Option V2 : ERC20Votes si gouvernance avec snapshots (ERC-5805).
+
+
+
+1,5% protocole
+1% : creator 
+0.5 : governance fund
+
+
+

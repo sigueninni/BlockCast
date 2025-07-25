@@ -1,0 +1,46 @@
+
+
+Création d’un marché
+- Créateur → MarketFactory.createMarket()
+    - Déploie un Market
+    - Dépose une caution (en USDC)
+    - Reçoit un reward en CAST (minté par ProtocolToken)
+
+ 2 : Placer un pari (YES ou NO)
+- Utilisateur → Market.placeBet(amount, isYes)
+    - Dépose des USDC dans le Market
+    - Reçoit un NFT BetNFT (minté par BetNFT), représentant sa position
+
+Proposer une résolution  si pas de résolution PAR ADMIn!!
+N’importe qui (souvent le créateur) → GovernanceModule.openProposal(market, proposedOutcome)
+    - Ouvre un vote de gouvernance
+    - Définit une période de vote (ex. 24–48h)
+
+Voter sur l’issue
+- Holders de CAST → GovernanceModule.vote(market, yesOrNo)
+    - Vote avec leur balance de CAST (via ProtocolToken)
+    - Vote compté, snapshoté voir le standard ERC20vOTES
+
+Finaliser le vote et résoudre
+- ADMIN → GovernanceModule.finalize(market)
+    - Compte les votes
+    - Appelle Market.resolve(outcome) via IA? plutot que Oracle?
+    - Si le créateur perd, sa caution est slashed (vers Treasury)
+
+Redeem les gains
+- Owner du BetNFT → Market.redeem(nftId)
+    - Vérifie le gagnant via BetNFT
+    - Paie le montant gagné (moins les fees au Treasury)
+
+Gérer les fonds protocolaires
+- Admin / Multisig → Treasury.withdraw()
+    - Récupère fees et cautions slashed
+    - Peut redistribuer pour rewards, buybacks, etc.
+
+
+- ProtocolToken : Factory, Users → CAST ERC20, incentives, voting
+- MarketFactory : Créateur → Crée marchés, prend caution, distribue CAST
+- Market : Users, GovernanceModule → Dépôt, mint BetNFT, resolve (via GovernanceModule), redeem
+- BetNFT : Market → Mint NFT positions, vérifie owner pour redeem
+- GovernanceModule : Users, CAST holders → Propositions, votes, finalisation pour résoudre un market
+- Treasury : Admin / Multisig → Collecte fees, cautions slashed, sécurise fonds
