@@ -1,50 +1,25 @@
-// SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.30;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
 
-/// @title ExampleContract
-/// @notice Description of what this contract does
 contract AdminManager {
-    // -------------------------------------------------------------------------
-    // 1. Type Declarations
-    // -------------------------------------------------------------------------
-
-    // -------------------------------------------------------------------------
-    // 2. State Variables
-    // -------------------------------------------------------------------------
-
-    address public owner;
     mapping(address => bool) public isAdmin;
+    address public superAdmin;
 
-    // -------------------------------------------------------------------------
-    // 3. Events
-    // -------------------------------------------------------------------------
+    constructor() {
+        superAdmin = msg.sender;
+        isAdmin[msg.sender] = true;
+    }
 
-    // -------------------------------------------------------------------------
-    // 4. Errors
-    // -------------------------------------------------------------------------
+    modifier onlySuperAdmin() {
+        require(msg.sender == superAdmin, "Not super admin");
+        _;
+    }
 
-    // -------------------------------------------------------------------------
-    // 5. Modifiers
-    // -------------------------------------------------------------------------
+    function addAdmin(address _admin) external onlySuperAdmin {
+        isAdmin[_admin] = true;
+    }
 
-    // -------------------------------------------------------------------------
-    // 6. Functions
-    // -------------------------------------------------------------------------
-
-    // External functions
-
-    // External functions that are view
-    // ...
-
-    // External functions that are pure
-    // ...
-
-    // Public functions
-    // ...
-
-    // Internal functions
-    // ...
-
-    // Private functions
-    // ...
+    function removeAdmin(address _admin) external onlySuperAdmin {
+        isAdmin[_admin] = false;
+    }
 }
