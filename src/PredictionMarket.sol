@@ -109,18 +109,32 @@ contract PredictionMarket {
 
     function getPriceYes(uint256 sharesToBuy) public view returns (uint256) {
         if (reserve == 0) return sharesToBuy; // Initial price 1:1
-        // Round up in favor of protocol: (a * b + c - 1) / c
-        uint256 numerator = reserve * sharesToBuy;
-        uint256 denominator = yesShares + sharesToBuy;
-        return (numerator + denominator - 1) / denominator;
+
+        // Constant Product AMM adapté pour prediction markets
+        // Idée: prix basé sur la proportion du pool
+        uint256 currentTotal = yesShares + noShares;
+        uint256 newYesShares = yesShares + sharesToBuy;
+        uint256 newTotal = newYesShares + noShares;
+
+        // Prix = réserve * (nouvelle proportion YES - ancienne proportion YES)
+        uint256 oldValue = (yesShares * reserve) / currentTotal;
+        uint256 newValue = (newYesShares * reserve) / newTotal;
+
+        return newValue - oldValue;
     }
 
     function getPriceNo(uint256 sharesToBuy) public view returns (uint256) {
         if (reserve == 0) return sharesToBuy; // Initial price 1:1
-        // Round up in favor of protocol: (a * b + c - 1) / c
-        uint256 numerator = reserve * sharesToBuy;
-        uint256 denominator = noShares + sharesToBuy;
-        return (numerator + denominator - 1) / denominator;
+
+        // Même logique pour NO
+        uint256 currentTotal = yesShares + noShares;
+        uint256 newNoShares = noShares + sharesToBuy;
+        uint256 newTotal = yesShares + newNoShares;
+
+        uint256 oldValue = (noShares * reserve) / currentTotal;
+        uint256 newValue = (newNoShares * reserve) / newTotal;
+
+        return newValue - oldValue;
     }
 
     function buyYes(uint256 shares) external isOpen {

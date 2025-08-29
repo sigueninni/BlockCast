@@ -227,7 +227,7 @@ contract PredictionMarketTest is Test {
 
     function testPricing() public {
         console2.log("=== DEBUT TEST PRICING ===");
-        
+
         // Create a market first
         vm.startPrank(creator);
         bytes32 marketId = factory.createMarket(
@@ -244,10 +244,14 @@ contract PredictionMarketTest is Test {
         uint256 shares = 100 * 10 ** 18;
         uint256 initialPrice = market.getPriceYes(shares);
         console2.log("=== PRICING INITIAL (reserve = 0) ===");
-        console2.log("Shares demandees:", shares / 10**18, "SHARES");
-        console2.log("Prix initial:", initialPrice / 10**18, "USDC");
-        console2.log("Prix par share (x1000):", (initialPrice * 1000) / shares, "/1000");
-        
+        console2.log("Shares demandees:", shares / 10 ** 18, "SHARES");
+        console2.log("Prix initial:", initialPrice / 10 ** 18, "USDC");
+        console2.log(
+            "Prix par share (x1000):",
+            (initialPrice * 1000) / shares,
+            "/1000"
+        );
+
         assertEq(initialPrice, 100 * 10 ** 18, "Initial price should be 1:1");
 
         // Add some liquidity first
@@ -255,55 +259,80 @@ contract PredictionMarketTest is Test {
         vm.startPrank(user1);
         uint256 firstBuy = 1000 * 10 ** 18;
         uint256 firstCost = market.getPriceYes(firstBuy);
-        console2.log("User1 achete:", firstBuy / 10**18, "SHARES YES");
-        console2.log("Prix total:", firstCost / 10**18, "USDC");
-        console2.log("Prix moyen (x1000):", (firstCost * 1000) / firstBuy, "/1000 USDC/share");
-        
+        console2.log("User1 achete:", firstBuy / 10 ** 18, "SHARES YES");
+        console2.log("Prix total:", firstCost / 10 ** 18, "USDC");
+        console2.log(
+            "Prix moyen (x1000):",
+            (firstCost * 1000) / firstBuy,
+            "/1000 USDC/share"
+        );
+
         usdc.approve(address(market), firstCost);
         market.buyYes(firstBuy);
-        
+
         // Afficher l'état après achat
         uint256 yesReserve = market.yesShares();
         uint256 noReserve = market.noShares();
         uint256 totalReserve = market.reserve();
-        console2.log("Apres achat - YES reserve:", yesReserve / 10**18, "SHARES");
-        console2.log("Apres achat - NO reserve:", noReserve / 10**18, "SHARES");
-        console2.log("Apres achat - Total reserve:", totalReserve / 10**18, "USDC");
+        console2.log(
+            "Apres achat - YES reserve:",
+            yesReserve / 10 ** 18,
+            "SHARES"
+        );
+        console2.log(
+            "Apres achat - NO reserve:",
+            noReserve / 10 ** 18,
+            "SHARES"
+        );
+        console2.log(
+            "Apres achat - Total reserve:",
+            totalReserve / 10 ** 18,
+            "USDC"
+        );
         vm.stopPrank();
 
         // Test pricing evolution with different amounts
         console2.log("\n=== EVOLUTION PRICING ===");
-        
+
         // Test avec différents montants
-        uint256 amount1 = 10 * 10**18;    // 10 shares
+        uint256 amount1 = 10 * 10 ** 18; // 10 shares
         uint256 price1Yes = market.getPriceYes(amount1);
         uint256 price1No = market.getPriceNo(amount1);
         console2.log("--- 10 shares ---");
-        console2.log("Prix YES total:", price1Yes / 10**18);
+        console2.log("Prix YES total:", price1Yes / 10 ** 18);
         console2.log("Prix YES moyen (x1000):", (price1Yes * 1000) / amount1);
-        console2.log("Prix NO total:", price1No / 10**18);
+        console2.log("Prix NO total:", price1No / 10 ** 18);
         console2.log("Prix NO moyen (x1000):", (price1No * 1000) / amount1);
-        console2.log("Somme moyens:", ((price1Yes + price1No) * 1000) / amount1);
-        
-        uint256 amount2 = 100 * 10**18;   // 100 shares
+        console2.log(
+            "Somme moyens:",
+            ((price1Yes + price1No) * 1000) / amount1
+        );
+
+        uint256 amount2 = 100 * 10 ** 18; // 100 shares
         uint256 price2Yes = market.getPriceYes(amount2);
         uint256 price2No = market.getPriceNo(amount2);
         console2.log("--- 100 shares ---");
-        console2.log("Prix YES total:", price2Yes / 10**18);
+        console2.log("Prix YES total:", price2Yes / 10 ** 18);
         console2.log("Prix YES moyen (x1000):", (price2Yes * 1000) / amount2);
-        console2.log("Prix NO total:", price2No / 10**18);
+        console2.log("Prix NO total:", price2No / 10 ** 18);
         console2.log("Prix NO moyen (x1000):", (price2No * 1000) / amount2);
-        console2.log("Somme moyens:", ((price2Yes + price2No) * 1000) / amount2);
-        
-        uint256 amount3 = 1000 * 10**18;  // 1000 shares
+        console2.log(
+            "Somme moyens:",
+            ((price2Yes + price2No) * 1000) / amount2
+        );
+
+        uint256 amount3 = 1000 * 10 ** 18; // 1000 shares
         uint256 price3Yes = market.getPriceYes(amount3);
         uint256 price3No = market.getPriceNo(amount3);
         console2.log("--- 1000 shares ---");
-        console2.log("Prix YES total:", price3Yes / 10**18);
+        console2.log("Prix YES total:", price3Yes / 10 ** 18);
         console2.log("Prix YES moyen (x1000):", (price3Yes * 1000) / amount3);
-        console2.log("Prix NO total:", price3No / 10**18);
+        console2.log("Prix NO total:", price3No / 10 ** 18);
         console2.log("Prix NO moyen (x1000):", (price3No * 1000) / amount3);
-        console2.log("Somme moyens:", ((price3Yes + price3No) * 1000) / amount3);
+        console2.log(
+            "Somme moyens:",
+            ((price3Yes + price3No) * 1000) / amount3
+        );
 
         // Test that price increases as more shares are bought
         uint256 smallAmount = 100 * 10 ** 18;
@@ -311,18 +340,24 @@ contract PredictionMarketTest is Test {
 
         uint256 priceSmall = market.getPriceYes(smallAmount);
         uint256 priceLarge = market.getPriceYes(largeAmount);
-        
+
         console2.log("\n=== COMPARAISON FINAL ===");
-        console2.log("Prix petit achat (100 shares):", priceSmall / 10**18);
-        console2.log("Prix gros achat (1000 shares):", priceLarge / 10**18);
-        console2.log("Prix moyen petit (x1000):", (priceSmall * 1000) / smallAmount);
-        console2.log("Prix moyen gros (x1000):", (priceLarge * 1000) / largeAmount);
+        console2.log("Prix petit achat (100 shares):", priceSmall / 10 ** 18);
+        console2.log("Prix gros achat (1000 shares):", priceLarge / 10 ** 18);
+        console2.log(
+            "Prix moyen petit (x1000):",
+            (priceSmall * 1000) / smallAmount
+        );
+        console2.log(
+            "Prix moyen gros (x1000):",
+            (priceLarge * 1000) / largeAmount
+        );
 
         assertTrue(
             priceLarge > priceSmall,
             "Price should increase for larger amounts"
         );
-        
+
         console2.log("=== FIN TEST PRICING ===\n");
     }
 
