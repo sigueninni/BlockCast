@@ -239,7 +239,7 @@ contract PredictionMarket {
         emit FinalResolution(outcome, _confidenceScore, block.timestamp);
     }
 
-    // ⚠️ DEPRECATED: Utiliser preliminaryResolve() puis finalResolve()
+    // DEPRECATED: Utiliser preliminaryResolve() puis finalResolve()
     function resolveMarket(Outcome outcome) external onlyAdmin {
         require(block.timestamp >= marketInfo.endTime, "Too early");
         require(marketInfo.status == MarketStatus.Open, "Invalid status");
