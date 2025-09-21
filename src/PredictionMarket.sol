@@ -14,6 +14,7 @@ contract PredictionMarket {
     enum MarketStatus {
         Submited,
         Open,
+        PendingResolution, // 🆕 Marché fermé, en attente résolution finale
         Resolved,
         Canceled
     }
@@ -31,6 +32,8 @@ contract PredictionMarket {
         address changedBy
     );
 
+    event PreliminaryResolution(Outcome outcome, uint256 timestamp);
+    event FinalResolution(Outcome outcome, uint256 confidenceScore, uint256 timestamp);
     struct MarketInfo {
         bytes32 id;
         string question;
@@ -55,6 +58,11 @@ contract PredictionMarket {
     mapping(address => uint256) public noBalance;
 
     Outcome public resolvedOutcome;
+    
+    // 🆕 Variables pour système de résolution en deux étapes
+    Outcome public preliminaryOutcome;
+    uint256 public confidenceScore;
+    uint256 public preliminaryResolveTime;
 
     modifier onlyAdmin() {
         require(adminManager.isAdmin(msg.sender), "Not admin");
@@ -101,44 +109,68 @@ contract PredictionMarket {
         require(_protocolFeeRate <= 1000, "Fee rate too high"); // Max 10%
         protocolFeeRate = _protocolFeeRate;
 
-        // Initialize with minimal shares and no reserve
-        yesShares = 1e18;
-        noShares = 1e18;
-        reserve = 0; // Start with 0 reserve
+        // Initialize with equal virtual liquidity for balanced pricing
+        yesShares = 100e18; // 100 YES shares
+        noShares = 100e18; // 100 NO shares
+        reserve = 0; // Start with 0 real reserve
+    }
+
+    // === SIMPLE POLYMARKET-STYLE PRICING ===
+
+    function getCurrentPrice()
+        public
+        view
+        returns (uint256 priceYes, uint256 priceNo)
+    {
+        // Logique simple: plus de YES shares = prix YES plus élevé
+        uint256 total = yesShares + noShares;
+        if (total == 0) {
+            return (50e16, 50e16); // 0.5 each if no shares
+        }
+
+        // Prix YES = proportion de YES shares
+        priceYes = (yesShares * 1e18) / total;
+
+        // Prix NO = reste pour garantir total = 1.0
+        priceNo = 1e18 - priceYes; // SIMPLE: toujours = 1.0 - priceYes
     }
 
     function getPriceYes(uint256 sharesToBuy) public view returns (uint256) {
-        if (reserve == 0) return sharesToBuy; // Initial price 1:1
+        if (sharesToBuy == 0) return 0;
 
-        // Constant Product AMM adapté pour prediction markets
-        // Idée: prix basé sur la proportion du pool
+        // Système simple: prix moyen basé sur la proportion actuelle et future
         uint256 currentTotal = yesShares + noShares;
-        uint256 newYesShares = yesShares + sharesToBuy;
-        uint256 newTotal = newYesShares + noShares;
+        uint256 futureTotal = currentTotal + sharesToBuy;
 
-        // Prix = réserve * (nouvelle proportion YES - ancienne proportion YES)
-        uint256 oldValue = (yesShares * reserve) / currentTotal;
-        uint256 newValue = (newYesShares * reserve) / newTotal;
+        uint256 currentPrice = (yesShares * 1e18) / currentTotal;
+        uint256 futurePrice = ((yesShares + sharesToBuy) * 1e18) / futureTotal;
 
-        return newValue - oldValue;
+        // Prix moyen pour cet achat
+        uint256 avgPrice = (currentPrice + futurePrice) / 2;
+
+        return (avgPrice * sharesToBuy) / 1e18;
     }
 
     function getPriceNo(uint256 sharesToBuy) public view returns (uint256) {
-        if (reserve == 0) return sharesToBuy; // Initial price 1:1
+        if (sharesToBuy == 0) return 0;
 
         // Même logique pour NO
         uint256 currentTotal = yesShares + noShares;
-        uint256 newNoShares = noShares + sharesToBuy;
-        uint256 newTotal = yesShares + newNoShares;
+        uint256 futureTotal = currentTotal + sharesToBuy;
 
-        uint256 oldValue = (noShares * reserve) / currentTotal;
-        uint256 newValue = (newNoShares * reserve) / newTotal;
+        uint256 currentPrice = (noShares * 1e18) / currentTotal;
+        uint256 futurePrice = ((noShares + sharesToBuy) * 1e18) / futureTotal;
 
-        return newValue - oldValue;
+        // Prix moyen pour cet achat
+        uint256 avgPrice = (currentPrice + futurePrice) / 2;
+
+        return (avgPrice * sharesToBuy) / 1e18;
     }
 
     function buyYes(uint256 shares) external isOpen {
         uint256 cost = getPriceYes(shares);
+        require(cost > 0, "Invalid cost");
+
         require(
             collateral.transferFrom(msg.sender, address(this), cost),
             "Transfer failed"
@@ -167,6 +199,47 @@ contract PredictionMarket {
         betNFT.mintBetNFT(msg.sender, address(this), shares, false);
     }
 
+    // 🆕 Première résolution : ferme juste le marché
+    function preliminaryResolve(Outcome outcome) external onlyAdmin {
+        require(block.timestamp >= marketInfo.endTime, "Too early");
+        require(marketInfo.status == MarketStatus.Open, "Invalid status");
+
+        marketInfo.status = MarketStatus.PendingResolution;
+        preliminaryOutcome = outcome;
+        preliminaryResolveTime = block.timestamp;
+
+        emit PreliminaryResolution(outcome, block.timestamp);
+    }
+
+    // 🆕 Résolution finale : toute la logique de payout + rewards
+    function finalResolve(Outcome outcome, uint256 _confidenceScore) external onlyAdmin {
+        require(marketInfo.status == MarketStatus.PendingResolution, "Must be in pending resolution");
+        require(_confidenceScore <= 100, "Confidence score must be <= 100");
+
+        marketInfo.status = MarketStatus.Resolved;
+        resolvedOutcome = outcome;
+        confidenceScore = _confidenceScore;
+
+        // Calculate and send protocol fees (configurable %)
+        uint256 totalReserve = reserve;
+        uint256 protocolFees = (totalReserve * protocolFeeRate) / 10000;
+
+        if (protocolFees > 0) {
+            require(
+                collateral.approve(address(treasury), protocolFees),
+                "Approval failed"
+            );
+            treasury.receiveFees(address(collateral), protocolFees);
+            reserve -= protocolFees;
+        }
+
+        // Reward creator with CAST tokens only after successful resolution
+        factory.rewardCreator(marketInfo.creator);
+
+        emit FinalResolution(outcome, _confidenceScore, block.timestamp);
+    }
+
+    // ⚠️ DEPRECATED: Utiliser preliminaryResolve() puis finalResolve()
     function resolveMarket(Outcome outcome) external onlyAdmin {
         require(block.timestamp >= marketInfo.endTime, "Too early");
         require(marketInfo.status == MarketStatus.Open, "Invalid status");
@@ -264,5 +337,34 @@ contract PredictionMarket {
 
     function getMarketInfo() external view returns (MarketInfo memory) {
         return marketInfo;
+    }
+
+    // === PROBABILITY FUNCTIONS ===
+
+    function getProbabilities()
+        external
+        view
+        returns (uint256 probYes, uint256 probNo)
+    {
+        // Dans notre système simple: probabilité = prix
+        (uint256 priceYes, ) = getCurrentPrice();
+
+        // Convertir de 18 decimals vers pourcentage (0-100)
+        probYes = (priceYes * 100) / 1e18;
+        probNo = 100 - probYes; // Garantit que probYes + probNo = 100
+    }
+
+    // === FONCTIONS UTILITAIRES POUR SYSTÈME DE RÉSOLUTION ===
+    
+    function isPendingResolution() external view returns (bool) {
+        return marketInfo.status == MarketStatus.PendingResolution;
+    }
+    
+    function getPreliminaryOutcome() external view returns (Outcome) {
+        return preliminaryOutcome;
+    }
+    
+    function getConfidenceScore() external view returns (uint256) {
+        return confidenceScore;
     }
 }

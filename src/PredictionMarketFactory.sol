@@ -16,16 +16,12 @@ contract PredictionMarketFactory {
     BetNFT public betNFT;
 
     bool public isFactoryPaused;
-    uint256 public defaultProtocolFeeRate = 200; // Default 2% for new markets
+    uint256 public defaultProtocolFeeRate = 200;
 
     mapping(bytes32 => address) public markets;
     address[] public allMarkets;
 
     event MarketCreated(bytes32 indexed id, address market, string question);
-    event FactoryPaused(bool paused);
-    event BetNFTUpdated(address newBetNFT);
-    event AdminManagerUpdated(address newAdminManager);
-    event DefaultProtocolFeeRateChanged(uint256 oldRate, uint256 newRate);
 
     modifier onlyAdmin() {
         require(AdminManager(adminManager).isAdmin(msg.sender), "Not admin");
@@ -77,39 +73,14 @@ contract PredictionMarketFactory {
         markets[id] = address(market);
         allMarkets.push(address(market));
 
-        // Authorize the new market to mint NFTs
         betNFT.authorizeMarket(address(market));
-
-        // Note: CAST reward will be given when market is resolved, not at creation
 
         emit MarketCreated(id, address(market), question);
         return id;
     }
 
-    function pauseFactory(bool _paused) external onlyAdmin {
-        isFactoryPaused = _paused;
-        emit FactoryPaused(_paused);
-    }
-
-    function updateBetNFT(address _newBetNFT) external onlyAdmin {
-        betNFT = BetNFT(_newBetNFT);
-        emit BetNFTUpdated(_newBetNFT);
-    }
-
-    function updateAdminManager(address _newAdminManager) external onlyAdmin {
-        adminManager = _newAdminManager;
-        emit AdminManagerUpdated(_newAdminManager);
-    }
-
-    function getAllMarkets() external view returns (address[] memory) {
-        return allMarkets;
-    }
-
     function rewardCreator(address creator) external {
-        // Only markets can call this function
         require(isValidMarket(msg.sender), "Only markets can reward creators");
-
-        // Mint 100 CAST tokens to the creator
         castToken.mint(creator, 100e18);
     }
 
@@ -120,28 +91,5 @@ contract PredictionMarketFactory {
             }
         }
         return false;
-    }
-
-    /**
-     * @dev Set default protocol fee rate for new markets (only super admin)
-     */
-    function setDefaultProtocolFeeRate(uint256 _newFeeRate) external {
-        require(
-            AdminManager(adminManager).superAdmin() == msg.sender,
-            "Only super admin"
-        );
-        require(_newFeeRate <= 1000, "Fee rate too high"); // Max 10%
-
-        uint256 oldRate = defaultProtocolFeeRate;
-        defaultProtocolFeeRate = _newFeeRate;
-
-        emit DefaultProtocolFeeRateChanged(oldRate, _newFeeRate);
-    }
-
-    /**
-     * @dev Get default protocol fee rate
-     */
-    function getDefaultProtocolFeeRate() external view returns (uint256) {
-        return defaultProtocolFeeRate;
     }
 }
