@@ -33,7 +33,11 @@ contract PredictionMarket {
     );
 
     event PreliminaryResolution(Outcome outcome, uint256 timestamp);
-    event FinalResolution(Outcome outcome, uint256 confidenceScore, uint256 timestamp);
+    event FinalResolution(
+        Outcome outcome,
+        uint256 confidenceScore,
+        uint256 timestamp
+    );
     struct MarketInfo {
         bytes32 id;
         string question;
@@ -58,7 +62,7 @@ contract PredictionMarket {
     mapping(address => uint256) public noBalance;
 
     Outcome public resolvedOutcome;
-    
+
     // 🆕 Variables pour système de résolution en deux étapes
     Outcome public preliminaryOutcome;
     uint256 public confidenceScore;
@@ -212,8 +216,14 @@ contract PredictionMarket {
     }
 
     // 🆕 Résolution finale : toute la logique de payout + rewards
-    function finalResolve(Outcome outcome, uint256 _confidenceScore) external onlyAdmin {
-        require(marketInfo.status == MarketStatus.PendingResolution, "Must be in pending resolution");
+    function finalResolve(
+        Outcome outcome,
+        uint256 _confidenceScore
+    ) external onlyAdmin {
+        require(
+            marketInfo.status == MarketStatus.PendingResolution,
+            "Must be in pending resolution"
+        );
         require(_confidenceScore <= 100, "Confidence score must be <= 100");
 
         marketInfo.status = MarketStatus.Resolved;
@@ -355,15 +365,15 @@ contract PredictionMarket {
     }
 
     // === FONCTIONS UTILITAIRES POUR SYSTÈME DE RÉSOLUTION ===
-    
+
     function isPendingResolution() external view returns (bool) {
         return marketInfo.status == MarketStatus.PendingResolution;
     }
-    
+
     function getPreliminaryOutcome() external view returns (Outcome) {
         return preliminaryOutcome;
     }
-    
+
     function getConfidenceScore() external view returns (uint256) {
         return confidenceScore;
     }

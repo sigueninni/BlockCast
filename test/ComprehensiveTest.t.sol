@@ -131,9 +131,13 @@ contract ComprehensiveTest is Test {
             price100No >= 55 * 1e18 && price100No <= 65 * 1e18,
             "NO price should be around 58% (same as YES in balanced system)"
         );
-        
+
         // Dans notre système équilibré, les prix sont symétriques
-        assertEq(price100Yes, price100No, "Prices should be equal in balanced system");
+        assertEq(
+            price100Yes,
+            price100No,
+            "Prices should be equal in balanced system"
+        );
     }
 
     // === TRADING TESTS ===
@@ -432,50 +436,67 @@ contract ComprehensiveTest is Test {
     }
 
     // === TEST NOUVELLE LOGIQUE DE RESOLUTION ===
-    
+
     function testTwoStageResolution() public {
         // Setup: Users trade
         vm.startPrank(user1);
         usdc.approve(address(market), 1000 * 1e18);
         market.buyYes(100 * 1e18);
         vm.stopPrank();
-        
+
         // Marché ouvert au début
         (, , , , PredictionMarket.MarketStatus status) = market.marketInfo();
-        assertTrue(status == PredictionMarket.MarketStatus.Open, "Market should be open initially");
-        
+        assertTrue(
+            status == PredictionMarket.MarketStatus.Open,
+            "Market should be open initially"
+        );
+
         // Avancer le temps
         vm.warp(block.timestamp + 366 days);
-        
+
         // 1ère étape: résolution préliminaire (ferme le marché)
         vm.startPrank(admin);
         market.preliminaryResolve(PredictionMarket.Outcome.Yes);
         vm.stopPrank();
-        
+
         // Vérifier état intermédiaire
         (, , , , status) = market.marketInfo();
-        assertTrue(status == PredictionMarket.MarketStatus.PendingResolution, "Market should be pending resolution");
+        assertTrue(
+            status == PredictionMarket.MarketStatus.PendingResolution,
+            "Market should be pending resolution"
+        );
         assertTrue(market.isPendingResolution(), "Should be in pending state");
-        assertEq(uint(market.preliminaryOutcome()), uint(PredictionMarket.Outcome.Yes), "Preliminary outcome should be Yes");
-        
+        assertEq(
+            uint(market.preliminaryOutcome()),
+            uint(PredictionMarket.Outcome.Yes),
+            "Preliminary outcome should be Yes"
+        );
+
         // Trading devrait être bloqué maintenant
         vm.startPrank(user2);
         usdc.approve(address(market), 1000 * 1e18);
         vm.expectRevert("Market not open");
         market.buyNo(50 * 1e18);
         vm.stopPrank();
-        
+
         // 2ème étape: résolution finale avec score de confiance
         vm.startPrank(admin);
         market.finalResolve(PredictionMarket.Outcome.Yes, 95); // 95% de confiance
         vm.stopPrank();
-        
+
         // Vérifier résolution finale
         (, , , , status) = market.marketInfo();
-        assertTrue(status == PredictionMarket.MarketStatus.Resolved, "Market should be resolved");
+        assertTrue(
+            status == PredictionMarket.MarketStatus.Resolved,
+            "Market should be resolved"
+        );
         assertEq(market.confidenceScore(), 95, "Confidence score should be 95");
-        assertEq(uint(market.resolvedOutcome()), uint(PredictionMarket.Outcome.Yes), "Final outcome should be Yes");
-        
+        assertEq(
+            uint(market.resolvedOutcome()),
+            uint(PredictionMarket.Outcome.Yes),
+            "Final outcome should be Yes"
+        );
+
         // Maintenant les utilisateurs peuvent récupérer leurs gains
         vm.startPrank(user1);
         market.redeem();
@@ -488,17 +509,21 @@ contract ComprehensiveTest is Test {
         // User1 achète des shares YES
         vm.startPrank(user1);
         usdc.approve(address(market), 1000 * 1e18);
-        
+
         uint256 sharesBought = 100 * 1e18;
         uint256 initialNFTBalance = betNFT.balanceOf(user1);
-        
+
         market.buyYes(sharesBought);
-        
+
         uint256 finalNFTBalance = betNFT.balanceOf(user1);
-        
+
         // User devrait avoir reçu un NFT
-        assertEq(finalNFTBalance, initialNFTBalance + 1, "User should receive NFT after purchase");
-        
+        assertEq(
+            finalNFTBalance,
+            initialNFTBalance + 1,
+            "User should receive NFT after purchase"
+        );
+
         vm.stopPrank();
     }
 
@@ -508,16 +533,29 @@ contract ComprehensiveTest is Test {
         usdc.approve(address(market), 1000 * 1e18);
         market.buyYes(150 * 1e18);
         vm.stopPrank();
-        
+
         // Récupérer le token ID (devrait être 1 pour le premier mint)
         uint256 tokenId = 1;
         assertTrue(betNFT.ownerOf(tokenId) == user1, "User should own the NFT");
-        
+
         // Vérifier les métadonnées
-        (address nftMarket, uint256 nftShares, bool nftIsYes, uint256 nftTimestamp) = betNFT.betMetadata(tokenId);
-        
-        assertEq(nftMarket, address(market), "NFT should reference correct market");
-        assertEq(nftShares, 150 * 1e18, "NFT should have correct shares amount");
+        (
+            address nftMarket,
+            uint256 nftShares,
+            bool nftIsYes,
+            uint256 nftTimestamp
+        ) = betNFT.betMetadata(tokenId);
+
+        assertEq(
+            nftMarket,
+            address(market),
+            "NFT should reference correct market"
+        );
+        assertEq(
+            nftShares,
+            150 * 1e18,
+            "NFT should have correct shares amount"
+        );
         assertTrue(nftIsYes, "NFT should be marked as YES position");
     }
 
@@ -527,40 +565,61 @@ contract ComprehensiveTest is Test {
         usdc.approve(address(market), 1000 * 1e18);
         market.buyYes(200 * 1e18);
         vm.stopPrank();
-        
+
         uint256 tokenId = 1;
         uint256 listingPrice = 0.1 ether; // Prix en ETH
-        
+
         // User1 liste son NFT
         vm.startPrank(user1);
         betNFT.listNFT(tokenId, listingPrice);
         vm.stopPrank();
-        
+
         // Vérifier que le NFT est listé
-        (uint256 listedTokenId, uint256 price, address seller, bool isListed) = betNFT.listings(tokenId);
+        (
+            uint256 listedTokenId,
+            uint256 price,
+            address seller,
+            bool isListed
+        ) = betNFT.listings(tokenId);
         assertEq(price, listingPrice, "Listing price should match");
         assertEq(seller, user1, "Seller should be user1");
         assertTrue(isListed, "NFT should be listed");
-        
+
         // User2 achète le NFT
         vm.deal(user2, 1 ether); // Donner de l'ETH à user2
-        
+
         uint256 user1InitialEthBalance = user1.balance;
         uint256 user1InitialYesShares = market.yesBalance(user1);
         uint256 user2InitialYesShares = market.yesBalance(user2);
-        
+
         vm.startPrank(user2);
         betNFT.buyNFT{value: listingPrice}(tokenId);
         vm.stopPrank();
-        
+
         // Vérifications après achat
-        assertEq(betNFT.ownerOf(tokenId), user2, "User2 should now own the NFT");
-        assertEq(user1.balance, user1InitialEthBalance + listingPrice, "User1 should receive ETH payment");
-        
+        assertEq(
+            betNFT.ownerOf(tokenId),
+            user2,
+            "User2 should now own the NFT"
+        );
+        assertEq(
+            user1.balance,
+            user1InitialEthBalance + listingPrice,
+            "User1 should receive ETH payment"
+        );
+
         // Vérifier transfert des shares
-        assertEq(market.yesBalance(user1), user1InitialYesShares - 200 * 1e18, "User1 should lose YES shares");
-        assertEq(market.yesBalance(user2), user2InitialYesShares + 200 * 1e18, "User2 should gain YES shares");
-        
+        assertEq(
+            market.yesBalance(user1),
+            user1InitialYesShares - 200 * 1e18,
+            "User1 should lose YES shares"
+        );
+        assertEq(
+            market.yesBalance(user2),
+            user2InitialYesShares + 200 * 1e18,
+            "User2 should gain YES shares"
+        );
+
         // Le listing devrait être supprimé
         (, , , bool stillListed) = betNFT.listings(tokenId);
         assertFalse(stillListed, "NFT should no longer be listed");
@@ -572,20 +631,20 @@ contract ComprehensiveTest is Test {
         usdc.approve(address(market), 1000 * 1e18);
         market.buyYes(100 * 1e18);
         vm.stopPrank();
-        
+
         uint256 tokenId = 1;
-        
+
         // Lister le NFT
         vm.startPrank(user1);
         betNFT.listNFT(tokenId, 0.1 ether);
         vm.stopPrank();
-        
+
         // Fermer le marché (preliminary resolve)
         vm.warp(block.timestamp + 366 days);
         vm.startPrank(admin);
         market.preliminaryResolve(PredictionMarket.Outcome.Yes);
         vm.stopPrank();
-        
+
         // Essayer d'acheter le NFT après fermeture du marché
         vm.deal(user2, 1 ether);
         vm.startPrank(user2);
@@ -597,26 +656,26 @@ contract ComprehensiveTest is Test {
     function testMultipleNFTsForSameUser() public {
         vm.startPrank(user1);
         usdc.approve(address(market), 5000 * 1e18);
-        
+
         // Premier achat YES
         market.buyYes(100 * 1e18);
-        
+
         // Deuxième achat NO
         market.buyNo(50 * 1e18);
-        
+
         // Troisième achat YES
         market.buyYes(200 * 1e18);
-        
+
         vm.stopPrank();
-        
+
         // User1 devrait avoir 3 NFTs
         assertEq(betNFT.balanceOf(user1), 3, "User should have 3 NFTs");
-        
+
         // Vérifier les métadonnées de chaque NFT
-        (,, bool isYes1, ) = betNFT.betMetadata(1);
-        (,, bool isYes2, ) = betNFT.betMetadata(2);
-        (,, bool isYes3, ) = betNFT.betMetadata(3);
-        
+        (, , bool isYes1, ) = betNFT.betMetadata(1);
+        (, , bool isYes2, ) = betNFT.betMetadata(2);
+        (, , bool isYes3, ) = betNFT.betMetadata(3);
+
         assertTrue(isYes1, "First NFT should be YES");
         assertFalse(isYes2, "Second NFT should be NO");
         assertTrue(isYes3, "Third NFT should be YES");
@@ -628,31 +687,46 @@ contract ComprehensiveTest is Test {
         usdc.approve(address(market), 1000 * 1e18);
         market.buyYes(100 * 1e18);
         vm.stopPrank();
-        
+
         uint256 tokenId = 1;
-        
+
         // Résoudre le marché en faveur de YES
         vm.warp(block.timestamp + 366 days);
         vm.startPrank(admin);
         market.preliminaryResolve(PredictionMarket.Outcome.Yes);
         market.finalResolve(PredictionMarket.Outcome.Yes, 100);
         vm.stopPrank();
-        
+
         // User1 peut toujours posséder le NFT après résolution
-        assertEq(betNFT.ownerOf(tokenId), user1, "User should still own NFT after resolution");
-        
+        assertEq(
+            betNFT.ownerOf(tokenId),
+            user1,
+            "User should still own NFT after resolution"
+        );
+
         // Et peut récupérer ses gains
         uint256 initialBalance = usdc.balanceOf(user1);
         vm.startPrank(user1);
         market.redeem();
         vm.stopPrank();
         uint256 finalBalance = usdc.balanceOf(user1);
-        
-        assertTrue(finalBalance > initialBalance, "User should receive winnings");
-        
+
+        assertTrue(
+            finalBalance > initialBalance,
+            "User should receive winnings"
+        );
+
         // Le NFT existe toujours mais les shares sont à zéro dans le marché
-        assertEq(market.yesBalance(user1), 0, "Market shares should be zero after redemption");
-        assertEq(betNFT.ownerOf(tokenId), user1, "NFT should still exist as collectible");
+        assertEq(
+            market.yesBalance(user1),
+            0,
+            "Market shares should be zero after redemption"
+        );
+        assertEq(
+            betNFT.ownerOf(tokenId),
+            user1,
+            "NFT should still exist as collectible"
+        );
     }
 
     function testNFTListingPermissions() public {
@@ -661,20 +735,20 @@ contract ComprehensiveTest is Test {
         usdc.approve(address(market), 1000 * 1e18);
         market.buyYes(100 * 1e18);
         vm.stopPrank();
-        
+
         uint256 tokenId = 1;
-        
+
         // User2 ne peut pas lister un NFT qu'il ne possède pas
         vm.startPrank(user2);
         vm.expectRevert("Not owner");
         betNFT.listNFT(tokenId, 0.1 ether);
         vm.stopPrank();
-        
+
         // User1 peut lister son propre NFT
         vm.startPrank(user1);
         betNFT.listNFT(tokenId, 0.1 ether);
         vm.stopPrank();
-        
+
         // Vérifier que c'est listé
         (, , , bool isListed) = betNFT.listings(tokenId);
         assertTrue(isListed, "NFT should be successfully listed");
@@ -686,23 +760,32 @@ contract ComprehensiveTest is Test {
         // Acheter des shares devrait créer un NFT
         vm.startPrank(user1);
         usdc.approve(address(market), 1000 * 1e18);
-        
+
         uint256 initialNFTBalance = betNFT.balanceOf(user1);
         market.buyYes(100 * 1e18);
         uint256 finalNFTBalance = betNFT.balanceOf(user1);
-        
+
         // Un NFT devrait avoir été créé
         assertEq(finalNFTBalance, initialNFTBalance + 1, "Should mint 1 NFT");
-        
+
         // Vérifier les métadonnées du NFT
         uint256 tokenId = betNFT.tokenOfOwnerByIndex(user1, 0);
-        (address nftMarket, uint256 nftShares, bool nftIsYes, uint256 nftTimestamp) = betNFT.betMetadata(tokenId);
-        
-        assertEq(nftMarket, address(market), "NFT should reference correct market");
+        (
+            address nftMarket,
+            uint256 nftShares,
+            bool nftIsYes,
+            uint256 nftTimestamp
+        ) = betNFT.betMetadata(tokenId);
+
+        assertEq(
+            nftMarket,
+            address(market),
+            "NFT should reference correct market"
+        );
         assertEq(nftShares, 100 * 1e18, "NFT should have correct shares");
         assertTrue(nftIsYes, "NFT should be YES position");
         assertTrue(nftTimestamp > 0, "NFT should have timestamp");
-        
+
         vm.stopPrank();
     }
 
@@ -711,20 +794,25 @@ contract ComprehensiveTest is Test {
         vm.startPrank(user1);
         usdc.approve(address(market), 1000 * 1e18);
         market.buyYes(100 * 1e18);
-        
+
         uint256 tokenId = betNFT.tokenOfOwnerByIndex(user1, 0);
         uint256 listingPrice = 0.5 ether; // Prix en ETH
-        
+
         // Lister le NFT
         betNFT.listNFT(tokenId, listingPrice);
-        
+
         // Vérifier le listing
-        (uint256 listedTokenId, uint256 listedPrice, address seller, bool active) = betNFT.listings(tokenId);
+        (
+            uint256 listedTokenId,
+            uint256 listedPrice,
+            address seller,
+            bool active
+        ) = betNFT.listings(tokenId);
         assertEq(listedTokenId, tokenId, "Listed token ID should match");
         assertEq(listedPrice, listingPrice, "Listed price should match");
         assertEq(seller, user1, "Seller should be user1");
         assertTrue(active, "Listing should be active");
-        
+
         vm.stopPrank();
     }
 
@@ -733,37 +821,53 @@ contract ComprehensiveTest is Test {
         vm.startPrank(user1);
         usdc.approve(address(market), 1000 * 1e18);
         market.buyYes(100 * 1e18);
-        
+
         uint256 tokenId = betNFT.tokenOfOwnerByIndex(user1, 0);
         uint256 listingPrice = 0.5 ether;
-        
+
         betNFT.listNFT(tokenId, listingPrice);
         vm.stopPrank();
-        
+
         // User2 achète le NFT
         uint256 user1InitialBalance = user1.balance;
         uint256 user1InitialYesShares = market.yesBalance(user1);
         uint256 user2InitialYesShares = market.yesBalance(user2);
-        
+
         vm.deal(user2, 1 ether); // Donner de l'ETH à user2
         vm.startPrank(user2);
-        
+
         betNFT.buyNFT{value: listingPrice}(tokenId);
-        
+
         vm.stopPrank();
-        
+
         // Vérifications après achat
-        
+
         // 1. NFT transféré
-        assertEq(betNFT.ownerOf(tokenId), user2, "NFT should be owned by user2");
-        
+        assertEq(
+            betNFT.ownerOf(tokenId),
+            user2,
+            "NFT should be owned by user2"
+        );
+
         // 2. Shares transférées dans le marché
-        assertEq(market.yesBalance(user1), user1InitialYesShares - 100 * 1e18, "User1 should lose YES shares");
-        assertEq(market.yesBalance(user2), user2InitialYesShares + 100 * 1e18, "User2 should gain YES shares");
-        
+        assertEq(
+            market.yesBalance(user1),
+            user1InitialYesShares - 100 * 1e18,
+            "User1 should lose YES shares"
+        );
+        assertEq(
+            market.yesBalance(user2),
+            user2InitialYesShares + 100 * 1e18,
+            "User2 should gain YES shares"
+        );
+
         // 3. Paiement transféré
-        assertEq(user1.balance, user1InitialBalance + listingPrice, "User1 should receive payment");
-        
+        assertEq(
+            user1.balance,
+            user1InitialBalance + listingPrice,
+            "User1 should receive payment"
+        );
+
         // 4. Listing désactivé
         (, , , bool active) = betNFT.listings(tokenId);
         assertFalse(active, "Listing should be inactive after sale");
@@ -774,30 +878,30 @@ contract ComprehensiveTest is Test {
         vm.startPrank(user1);
         usdc.approve(address(market), 1000 * 1e18);
         market.buyYes(100 * 1e18);
-        
+
         uint256 tokenId = betNFT.tokenOfOwnerByIndex(user1, 0);
         betNFT.listNFT(tokenId, 0.5 ether);
         vm.stopPrank();
-        
+
         // Avancer le temps après endTime
         vm.warp(block.timestamp + 366 days);
-        
+
         // Tentative d'achat du NFT devrait échouer
         vm.deal(user2, 1 ether);
         vm.startPrank(user2);
-        
+
         vm.expectRevert("Market ended");
         betNFT.buyNFT{value: 0.5 ether}(tokenId);
-        
+
         vm.stopPrank();
-        
+
         // De même, nouvelle tentative de listing devrait échouer
         vm.startPrank(user1);
         betNFT.cancelListing(tokenId); // Annuler le listing existant
-        
+
         vm.expectRevert("Market ended");
         betNFT.listNFT(tokenId, 0.3 ether);
-        
+
         vm.stopPrank();
     }
 
@@ -806,24 +910,24 @@ contract ComprehensiveTest is Test {
         vm.startPrank(user1);
         usdc.approve(address(market), 1000 * 1e18);
         market.buyYes(100 * 1e18);
-        
+
         uint256 tokenId = betNFT.tokenOfOwnerByIndex(user1, 0);
         betNFT.listNFT(tokenId, 0.5 ether);
         vm.stopPrank();
-        
+
         // Avancer le temps et faire une résolution préliminaire
         vm.warp(block.timestamp + 366 days);
         vm.startPrank(admin);
         market.preliminaryResolve(PredictionMarket.Outcome.Yes);
         vm.stopPrank();
-        
+
         // Tentative d'achat du NFT devrait échouer (marché fermé)
         vm.deal(user2, 1 ether);
         vm.startPrank(user2);
-        
+
         vm.expectRevert("Market must be open");
         betNFT.buyNFT{value: 0.5 ether}(tokenId);
-        
+
         vm.stopPrank();
     }
 
@@ -832,21 +936,24 @@ contract ComprehensiveTest is Test {
         vm.startPrank(user1);
         usdc.approve(address(market), 1000 * 1e18);
         market.buyYes(100 * 1e18);
-        
+
         uint256 tokenId = betNFT.tokenOfOwnerByIndex(user1, 0);
         betNFT.listNFT(tokenId, 0.5 ether);
-        
+
         // Vérifier que le listing est actif
         (, , , bool activeBefore) = betNFT.listings(tokenId);
         assertTrue(activeBefore, "Listing should be active initially");
-        
+
         // Annuler le listing
         betNFT.cancelListing(tokenId);
-        
+
         // Vérifier que le listing est inactif
         (, , , bool activeAfter) = betNFT.listings(tokenId);
-        assertFalse(activeAfter, "Listing should be inactive after cancellation");
-        
+        assertFalse(
+            activeAfter,
+            "Listing should be inactive after cancellation"
+        );
+
         vm.stopPrank();
     }
 
@@ -855,34 +962,40 @@ contract ComprehensiveTest is Test {
         vm.startPrank(user1);
         usdc.approve(address(market), 1000 * 1e18);
         market.buyYes(100 * 1e18);
-        
+
         uint256 tokenId = betNFT.tokenOfOwnerByIndex(user1, 0);
-        
+
         // Tester les métadonnées
-        (address nftMarket, uint256 nftShares, bool nftIsYes, uint256 nftTimestamp) = betNFT.betMetadata(tokenId);
+        (
+            address nftMarket,
+            uint256 nftShares,
+            bool nftIsYes,
+            uint256 nftTimestamp
+        ) = betNFT.betMetadata(tokenId);
         assertEq(nftMarket, address(market));
         assertEq(nftShares, 100 * 1e18);
         assertTrue(nftIsYes);
         assertTrue(nftTimestamp > 0);
-        
+
         // Tester le tokenURI
         string memory tokenURI = betNFT.tokenURI(tokenId);
         assertTrue(bytes(tokenURI).length > 0, "TokenURI should not be empty");
-        
+
         vm.stopPrank();
-        
+
         // User2 achète des shares NO pour comparaison
         vm.startPrank(user2);
         usdc.approve(address(market), 1000 * 1e18);
         market.buyNo(50 * 1e18);
-        
+
         uint256 tokenId2 = betNFT.tokenOfOwnerByIndex(user2, 0);
-        
-        (address nftMarket2, uint256 nftShares2, bool nftIsYes2, ) = betNFT.betMetadata(tokenId2);
+
+        (address nftMarket2, uint256 nftShares2, bool nftIsYes2, ) = betNFT
+            .betMetadata(tokenId2);
         assertEq(nftMarket2, address(market));
         assertEq(nftShares2, 50 * 1e18);
         assertFalse(nftIsYes2, "Should be NO position");
-        
+
         vm.stopPrank();
     }
 
@@ -890,37 +1003,40 @@ contract ComprehensiveTest is Test {
         // User1 fait plusieurs achats (devrait créer plusieurs NFTs)
         vm.startPrank(user1);
         usdc.approve(address(market), 5000 * 1e18);
-        
+
         market.buyYes(100 * 1e18);
         market.buyNo(200 * 1e18);
         market.buyYes(50 * 1e18);
-        
+
         // Vérifier qu'il a 3 NFTs
         assertEq(betNFT.balanceOf(user1), 3, "User1 should have 3 NFTs");
-        
+
         // Lister deux NFTs à des prix différents
         uint256 tokenId1 = betNFT.tokenOfOwnerByIndex(user1, 0);
         uint256 tokenId2 = betNFT.tokenOfOwnerByIndex(user1, 1);
-        
+
         betNFT.listNFT(tokenId1, 0.3 ether);
         betNFT.listNFT(tokenId2, 0.7 ether);
-        
+
         vm.stopPrank();
-        
+
         // User2 achète le NFT le moins cher
         vm.deal(user2, 2 ether);
         vm.startPrank(user2);
-        
+
         uint256 user2InitialBalance = user2.balance;
         betNFT.buyNFT{value: 0.3 ether}(tokenId1);
-        
+
         // Vérifier le transfert
         assertEq(betNFT.ownerOf(tokenId1), user2, "User2 should own tokenId1");
-        assertEq(user2.balance, user2InitialBalance - 0.3 ether, "User2 should pay 0.3 ETH");
+        assertEq(
+            user2.balance,
+            user2InitialBalance - 0.3 ether,
+            "User2 should pay 0.3 ETH"
+        );
         assertEq(betNFT.balanceOf(user1), 2, "User1 should have 2 NFTs left");
         assertEq(betNFT.balanceOf(user2), 1, "User2 should have 1 NFT");
-        
+
         vm.stopPrank();
     }
-
 }
